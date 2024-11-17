@@ -5,6 +5,7 @@ import {
   revealCell,
   toggleFlag,
   resetGame,
+  areaOpen,
 } from "../store/gameSlice";
 import { RootState } from "../store";
 
@@ -26,11 +27,24 @@ const Board = () => {
   const [customRows, setCustomRows] = useState(8);
   const [customCols, setCustomCols] = useState(8);
   const [customMines, setCustomMines] = useState(10);
+  const [mouseDown, setMouseDown] = useState(0);
+
+  const handleMouseDown = (e: React.MouseEvent) => {
+    setMouseDown(e.buttons);
+  };
+  const handleMouseUp = (e: React.MouseEvent, x: number, y: number) => {
+    if (mouseDown === 3) {
+      dispatch(areaOpen({ x, y }));
+    }
+    setMouseDown(e.buttons);
+  };
   let timer: number;
 
   const handleDifficultyChange = (e: React.ChangeEvent<HTMLSelectElement>) => {
     const value = e.target.value;
     setDifficulty(value);
+    localStorage.setItem("difficulty", value); // 로컬스토리지에 난이도 저장
+
     if (value === "custom") {
       setShowModal(true);
     } else {
@@ -64,6 +78,9 @@ const Board = () => {
           mineCount: mines,
         })
       );
+      localStorage.setItem("customRows", rows.toString());
+      localStorage.setItem("customCols", cols.toString());
+      localStorage.setItem("customMines", mines.toString());
     }
   };
 
@@ -93,6 +110,13 @@ const Board = () => {
         mineCount: customMines,
       })
     );
+
+    // 로컬 스토리지에 설정 값 저장
+    localStorage.setItem("difficulty", "custom");
+    localStorage.setItem("customRows", customRows.toString());
+    localStorage.setItem("customCols", customCols.toString());
+    localStorage.setItem("customMines", customMines.toString());
+
     setShowModal(false);
   };
   useEffect(() => {
@@ -130,7 +154,7 @@ const Board = () => {
 
   const handleRightClick = (x: number, y: number, event: React.MouseEvent) => {
     event.preventDefault();
-    if (!isGameOver) {
+    if (!isGameOver && !grid[x][y].isRevealed) {
       dispatch(toggleFlag({ x, y }));
       setFlagsRemaining((prevFlags) =>
         grid[x][y].isFlagged ? prevFlags + 1 : prevFlags - 1
@@ -150,6 +174,31 @@ const Board = () => {
   useEffect(() => {
     handleReset();
   }, [difficulty]);
+
+  useEffect(() => {
+    // 로컬 스토리지에서 값 불러오기
+    const storedDifficulty = localStorage.getItem("difficulty");
+    const storedRows = localStorage.getItem("customRows");
+    const storedCols = localStorage.getItem("customCols");
+    const storedMines = localStorage.getItem("customMines");
+
+    if (storedDifficulty) setDifficulty(storedDifficulty);
+    if (storedRows) setCustomRows(Number(storedRows));
+    if (storedCols) setCustomCols(Number(storedCols));
+    if (storedMines) setCustomMines(Number(storedMines));
+
+    // 기본적으로 로컬스토리지에서 값을 불러왔을 때 시작하는 게임
+    if (storedRows && storedCols && storedMines) {
+      dispatch(
+        startGame({
+          rows: Number(storedRows),
+          cols: Number(storedCols),
+          firstClick: { x: -1, y: -1 },
+          mineCount: Number(storedMines),
+        })
+      );
+    }
+  }, []); // 컴포넌트가 처음 마운트될 때 한 번만 실행
 
   return (
     <div className="p-20 flex flex-col items-center justify-center min-h-screen bg-lime-100">
@@ -198,6 +247,8 @@ const Board = () => {
               onContextMenu={(event) =>
                 handleRightClick(rowIndex, colIndex, event)
               }
+              onMouseDown={(event) => handleMouseDown(event)}
+              onMouseUp={(event) => handleMouseUp(event, rowIndex, colIndex)}
             >
               {cell.isRevealed && !cell.isMine
                 ? cell.neighborMines > 0

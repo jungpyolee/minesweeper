@@ -185,10 +185,67 @@ const gameSlice = createSlice({
       state.isGameOver = false;
       state.isSuccess = false;
     },
+    areaOpen(state, action: PayloadAction<{ x: number; y: number }>) {
+      const { x, y } = action.payload;
+      const cell = state.grid[x][y];
+
+      if (!cell.isRevealed || cell.isFlagged || cell.neighborMines === 0) {
+        return;
+      }
+
+      const neighborFlags = [-1, 0, 1]
+        .flatMap((dx) => [-1, 0, 1].map((dy) => ({ dx, dy })))
+        .filter(({ dx, dy }) => {
+          const nx = x + dx;
+          const ny = y + dy;
+          return (
+            !(dx === 0 && dy === 0) && // 자기 자신 제외
+            nx >= 0 &&
+            nx < state.rows &&
+            ny >= 0 &&
+            ny < state.cols &&
+            state.grid[nx][ny].isFlagged
+          );
+        }).length;
+
+      if (neighborFlags >= cell.neighborMines) {
+        [-1, 0, 1].forEach((dx) => {
+          [-1, 0, 1].forEach((dy) => {
+            const nx = x + dx;
+            const ny = y + dy;
+            if (
+              nx >= 0 &&
+              nx < state.rows &&
+              ny >= 0 &&
+              ny < state.cols &&
+              !state.grid[nx][ny].isRevealed &&
+              !state.grid[nx][ny].isFlagged
+            ) {
+              state.grid[nx][ny].isRevealed = true;
+              if (state.grid[nx][ny].isMine) {
+                state.grid.forEach((row) =>
+                  row.forEach((cell) => {
+                    cell.isRevealed = true;
+                    if (cell.isFlagged && !cell.isMine) cell.isFlagged = false;
+                  })
+                );
+                state.isGameOver = true;
+              } else {
+                const nonMineCells = state.grid
+                  .flat()
+                  .filter((cell) => !cell.isMine);
+                state.isSuccess = nonMineCells.every((cell) => cell.isRevealed);
+                state.isGameOver = state.isSuccess;
+              }
+            }
+          });
+        });
+      }
+    },
   },
 });
 
-export const { startGame, revealCell, toggleFlag, resetGame } =
+export const { startGame, revealCell, toggleFlag, resetGame, areaOpen } =
   gameSlice.actions;
 
 export default gameSlice.reducer;
