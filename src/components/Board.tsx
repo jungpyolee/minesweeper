@@ -1,4 +1,4 @@
-import React, { useEffect, useState } from "react";
+import React, { useCallback, useEffect, useState } from "react";
 import { useSelector, useDispatch } from "react-redux";
 import {
   startGame,
@@ -135,32 +135,38 @@ const Board = () => {
     setFlagsRemaining(mineCount);
   }, [mineCount]);
 
-  const handleLeftClick = (x: number, y: number) => {
-    if (!isGameOver && !grid[x][y].isFlagged) {
-      if (!timerRunning) {
-        dispatch(
-          startGame({
-            rows: numRows,
-            cols: numCols,
-            firstClick: { x, y },
-            mineCount,
-          })
+  const handleLeftClick = useCallback(
+    (x: number, y: number) => {
+      if (!isGameOver && !grid[x][y].isFlagged) {
+        if (!timerRunning) {
+          dispatch(
+            startGame({
+              rows: numRows,
+              cols: numCols,
+              firstClick: { x, y },
+              mineCount,
+            })
+          );
+        }
+        dispatch(revealCell({ x, y }));
+        setTimerRunning(true);
+      }
+    },
+    [isGameOver, timerRunning, dispatch, grid, numRows, numCols, mineCount]
+  );
+
+  const handleRightClick = useCallback(
+    (x: number, y: number, event: React.MouseEvent) => {
+      event.preventDefault();
+      if (!isGameOver && !grid[x][y].isRevealed) {
+        dispatch(toggleFlag({ x, y }));
+        setFlagsRemaining((prevFlags) =>
+          grid[x][y].isFlagged ? prevFlags + 1 : prevFlags - 1
         );
       }
-      dispatch(revealCell({ x, y }));
-      setTimerRunning(true);
-    }
-  };
-
-  const handleRightClick = (x: number, y: number, event: React.MouseEvent) => {
-    event.preventDefault();
-    if (!isGameOver && !grid[x][y].isRevealed) {
-      dispatch(toggleFlag({ x, y }));
-      setFlagsRemaining((prevFlags) =>
-        grid[x][y].isFlagged ? prevFlags + 1 : prevFlags - 1
-      );
-    }
-  };
+    },
+    [isGameOver, dispatch, grid]
+  );
 
   const handleReset = () => {
     setFlagsRemaining(mineCount);
@@ -228,6 +234,7 @@ const Board = () => {
 
       <div
         className={`grid gap-1 p-2 bg-green-500 rounded-lg shadow-lg`}
+        onContextMenu={(e) => e.preventDefault()}
         style={{ gridTemplateColumns: `repeat(${numCols}, 32px)` }}
       >
         {grid.map((row, rowIndex) =>
@@ -244,9 +251,9 @@ const Board = () => {
                   : "bg-green-200"
               }`}
               onClick={() => handleLeftClick(rowIndex, colIndex)}
-              onContextMenu={(event) =>
-                handleRightClick(rowIndex, colIndex, event)
-              }
+              onContextMenu={(event) => {
+                handleRightClick(rowIndex, colIndex, event);
+              }}
               onMouseDown={(event) => handleMouseDown(event)}
               onMouseUp={(event) => handleMouseUp(event, rowIndex, colIndex)}
             >
