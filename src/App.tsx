@@ -1,11 +1,12 @@
 import React from "react";
 import logo from "./logo.svg";
 import "./App.css";
+import Board from "./components/Board";
 
 function App() {
   return (
     <div className="App">
-      <h1 className="text-4xl text-center my-4">Minesweeper Game</h1>
+      <Board />
     </div>
   );
 }
