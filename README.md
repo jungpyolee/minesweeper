@@ -1,6 +1,5 @@
 # 설치 및 실행방법
 
-    classum-leejungpyo-minesweeper 폴더로 이동후
     1. npm install
     2. npm start
 
@@ -20,4 +19,3 @@
     3. 사용자 친화적인 UI/ UX
         - 커스텀 난이도 모달 사용했습니다.
         - 우클릭 기본이벤트 제한하여 우클릭 설정창이 열리지 않도록 처리했습니다.
-
